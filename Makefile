@@ -12,7 +12,7 @@ OPTIMIZE = --opt-code-size
 
 # define compiler path (if not in PATH), and flags
 CC       = sdcc
-CFLAGS   = -mstm8 --std-sdcc99 -D$(DEVICE)
+CFLAGS   = -mstm8 --std-sdcc99 -D$(DEVICE) -DUART1_FIFO
 LFLAGS   = -mstm8 -lstm8 $(OPTIMIZE) --out-fmt-ihx
 
 # set target
@@ -31,7 +31,7 @@ PRJ_OBJECT  = $(addprefix $(OBJDIR)/, $(PRJ_SOURCE:.c=.rel))
 LIB_ROOT    = ./STM8_Lib
 LIB_INC_DIR = $(LIB_ROOT)
 LIB_SRC_DIR = $(LIB_ROOT)
-LIB_SOURCE  = gpio.c uart1.c spi.c
+LIB_SOURCE  = gpio.c uart1.c putchar.c
 LIB_HEADER  = $(patsubst %.c,%.h,$(LIB_SOURCE))
 LIB_OBJECT := $(addprefix $(OBJDIR)/, $(LIB_SOURCE:.c=.rel))
 
