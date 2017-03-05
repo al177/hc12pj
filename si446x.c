@@ -7,18 +7,14 @@
 const uint8_t config_array[] = RADIO_CONFIGURATION_DATA_ARRAY;
 
 void si446x_busy_cs(void) {
-	uint32_t f=10000;
+	uint32_t f=5000;
 	while(f>0) {
 		f--;
 	}
 }
 
-uint8_t si446x_spi_cmd_resp(char* buf, uint8_t size, uint16_t timeout) {
-
-	uint8_t i;
-
-	while(timeout > 0) {
-
+void si446x_spi_frame_start(void) {
+		register uint8_t i;
 		/* assert nSEL */
 		GPIO_SET(PORT_D, PIN_2, 0);
 		si446x_busy_cs();
@@ -28,33 +24,9 @@ uint8_t si446x_spi_cmd_resp(char* buf, uint8_t size, uint16_t timeout) {
 
 		// clear MISO buffer
 		i = SPI.DR.byte;
-		i = 0;
+}
 
-		// loop over numTx bytes
-		while (i < (size + 2)) {
-
-			while(!SPI.SR.reg.TXE) {
-				_NOP_;
-			}
-
-			SPI.DR.byte = 0x44;
-
-			while(!SPI.SR.reg.RXNE) {
-				_NOP_;
-			}
-			if(i == 0) {
-				buf[0] = SPI.DR.byte;
-			} else if (i == 1) {
-				if(SPI.DR.byte != 0xFF) {
-					timeout--;
-					break;
-				}
-			} else {
-				buf[i-2] = SPI.DR.byte;
-			}
-			i++;
-		} // send/receive loop
-
+void si446x_spi_frame_end(void) {
 		// re-enable interrupts
 		ENABLE_INTERRUPTS;
 
@@ -64,7 +36,46 @@ uint8_t si446x_spi_cmd_resp(char* buf, uint8_t size, uint16_t timeout) {
 		/* deassert nSEL */
 		GPIO_SET(PORT_D, PIN_2, 1);
 		si446x_busy_cs();
+}
 
+uint8_t si446x_spi_shift_byte(uint8_t tx) {
+			while(!SPI.SR.reg.TXE) {
+				_NOP_;
+			}
+
+			SPI.DR.byte = tx;
+
+			while(!SPI.SR.reg.RXNE) {
+				_NOP_;
+			}
+			return SPI.DR.byte;
+}
+
+uint8_t si446x_spi_cmd_resp(char* buf, uint8_t size, uint16_t timeout) {
+
+	uint8_t i;
+
+	while(timeout > 0) {
+		si446x_spi_frame_start();
+		i = 0;
+
+		// loop over numTx bytes
+		while (i < (size + 2)) {
+
+			if(i == 0) {
+				buf[0] = si446x_spi_shift_byte(0x44);
+			} else if (i == 1) {
+				if(si446x_spi_shift_byte(0xFF) != 0xFF) {
+					timeout--;
+					break;
+				}
+			} else {
+				buf[i-2] = si446x_spi_shift_byte(0xFF);
+			}
+			i++;
+		} // send/receive loop
+
+		si446x_spi_frame_end();
 		if (i > 1) {
 			return 1; /* data was read */
 		}
@@ -76,43 +87,17 @@ void si446x_spi_cmd_send(char* buf, uint8_t size) {
 
 	uint8_t i;
 	uint8_t dummy;
-	/* assert nSEL */
-	GPIO_SET(PORT_D, PIN_2, 0);
-	si446x_busy_cs();
-
-	// disable interrupts to prevent timing issue
-	DISABLE_INTERRUPTS;
-
-	// clear MISO buffer
-	i = SPI.DR.byte;
+	si446x_spi_frame_start();
 	i = 0;
 	// loop over numTx bytes
 	while (i < size) {
 
-		while(!SPI.SR.reg.TXE) {
-			_NOP_;
-		}
-
-		SPI.DR.byte = buf[i];
-
-		while(!SPI.SR.reg.RXNE) {
-			_NOP_;
-		}
-		dummy = SPI.DR.byte;
+		si446x_spi_shift_byte(buf[i]);
 
 		i++;
 	} // send/receive loop
 
-	// re-enable interrupts
-	ENABLE_INTERRUPTS;
-
-	// wait until not busy
-	while (SPI.SR.reg.BSY);
-
-	/* deassert nSEL */
-	GPIO_SET(PORT_D, PIN_2, 1);
-	si446x_busy_cs();
-
+	si446x_spi_frame_end();
 }
 
 
