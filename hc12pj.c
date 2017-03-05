@@ -25,6 +25,7 @@
 #undef _MAIN_
 
 #include "si446x.h"
+#include "ax25.h"
 
 inline void setup_platform(void) {
 	DISABLE_INTERRUPTS;

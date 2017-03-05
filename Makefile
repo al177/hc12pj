@@ -17,7 +17,7 @@ LFLAGS   = -mstm8 -lstm8 $(OPTIMIZE) --out-fmt-ihx
 
 # set target
 OBJDIR   = $(DEVICE)
-TARGET   = $(OBJDIR)/hc12pkt.ihx
+TARGET   = $(OBJDIR)/hc12pj.ihx
 
 # set project options (all .c files in folder)
 PRJ_ROOT = .
